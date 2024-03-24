@@ -1,6 +1,9 @@
 package common;
 
 import obstacles.Obstacle;
+import pathFinding.BFSPathFinder;
+import pathFinding.GridPathFinder;
+import pathFinding.Path;
 
 import java.util.ArrayList;
 
@@ -8,6 +11,15 @@ import java.util.ArrayList;
  * Represents a map with obstacles.
  */
 public class Map {
+    /**
+     * Returns true if the given location is obstructed by an obstacle, and false otherwise.
+     * @param x The x coordinate of the location
+     * @param y The y coordinate of the location
+     * @return True if the given location is obstructed by an obstacle, and false otherwise
+     */
+    public boolean isLocationObstructed(int x, int y) {
+        return getObstacleAtLocation(x, y) != null;
+    }
     private final ArrayList<Obstacle> obstacles = new ArrayList<>();
     private final int PADDING = 2;
 
@@ -56,13 +68,22 @@ public class Map {
      * @return A string representation of the map with the given start and target locations
      */
     public String getSolvedMap(Location start, Location target) {
+        // Find the path
+        GridPathFinder pathFinder = new BFSPathFinder(this);
+        Path path = pathFinder.findPath(start, target);
+
         // Define the bounds (including padding) based on the start and target locations
         Location topLeft, bottomRight;
-        int maxX, maxY, minX, minY;
-        maxX = Math.max(start.getX(), target.getX());
-        maxY = Math.max(start.getY(), target.getY());
-        minX = Math.min(start.getX(), target.getX());
-        minY = Math.min(start.getY(), target.getY());
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE,
+                minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
+        for (Location location : path) {
+            int x = location.getX();
+            int y = location.getY();
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+        }
         topLeft = new Location(minX - PADDING, minY - PADDING);
         bottomRight = new Location(maxX + PADDING, maxY + PADDING);
 
@@ -71,13 +92,9 @@ public class Map {
         char[][] solvedMap = new char[bottomRight.getY() - topLeft.getY() + 1][bottomRight.getX() - topLeft.getX() + 1];
         for (int y = topLeft.getY(); y <= bottomRight.getY(); y++) {
             for (int x = topLeft.getX(); x <= bottomRight.getX(); x++) {
-                // 1. Check start and target
-                if (x == start.getX() && y == start.getY()) {
-                    solvedMap[y - topLeft.getY()][x - topLeft.getX()] = 'S';
-                    continue;
-                }
-                if (x == target.getX() && y == target.getY()) {
-                    solvedMap[y - topLeft.getY()][x - topLeft.getX()] = 'E';
+                // 1. Check location in path
+                if (path.isLocationInPath(x, y)) {
+                    solvedMap[y - topLeft.getY()][x - topLeft.getX()] = path.getSymbolForLocation(x, y);
                     continue;
                 }
 
@@ -98,5 +115,6 @@ public class Map {
 
         // Convert the map to a string
         return matrixToString(solvedMap);
+
     }
 }
